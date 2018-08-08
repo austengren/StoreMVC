@@ -16,10 +16,25 @@ namespace FoodnStuff.WebMVC.Controllers
         private ApplicationDbContext db = new ApplicationDbContext();
 
         // GET: Transaction
-        public ActionResult Index()
+        public ViewResult Index(string sortOrder, string searchString)
         {
-            var transactions = db.Transactions.Include(t => t.Customer).Include(t => t.Product);
-            return View(transactions.ToList());
+            ViewBag.NameSortParm = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            var Transactions = from s in db.Transactions
+                            select s;
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                Transactions = Transactions.Where(s => s.CustomerID.ToString().Contains(searchString));
+            }
+            switch (sortOrder)
+            {
+                case "name_desc":
+                    Transactions = Transactions.OrderByDescending(s => s.CustomerID);
+                    break;
+                default:
+                    Transactions = Transactions.OrderBy(s => s.CustomerID);
+                    break;
+            }
+            return View(Transactions.ToList());
         }
 
         // GET: Transaction/Details/5
@@ -52,6 +67,9 @@ namespace FoodnStuff.WebMVC.Controllers
         [ValidateAntiForgeryToken]
         public ActionResult Create([Bind(Include = "TransactionID,CustomerID,ProductID")] Transaction transaction)
         {
+            //9 Call the GetProductByID method and pass in transaction.
+            GetProductByID(transaction);
+
             if (ModelState.IsValid)
             {
                 db.Transactions.Add(transaction);
@@ -62,6 +80,49 @@ namespace FoodnStuff.WebMVC.Controllers
             ViewBag.CustomerID = new SelectList(db.Customers, "CustomerID", "FirstName", transaction.CustomerID);
             ViewBag.ProductID = new SelectList(db.Products, "ProductID", "ProductName", transaction.ProductID);
             return View(transaction);
+        }
+
+        //1. Need to find the product in the database that is associated with the transaction.
+        //2. This means the method will need to return the product.
+        //3. If the product doesn't exist, we need to throw an exception.
+        //4. When we find the product in the db, we need to store it in a variable.
+        //5. Now that the object is stored, we can access it's quantity.
+        //6. If the product does not exist, throw an error.
+        //7. Update the quantity of the product....
+        //8. Get the product out of the function
+        //9. Call the GetProductByID method and pass in transaction.
+
+        //Need to find the product in the database that is associated with the transaction.
+        private Product GetProductByID(Transaction transaction)
+        {
+            //If the product doesn't exist, 
+            if (transaction.ProductID == null)
+            {
+                //we need to throw an exception.
+                throw new Exception();
+            }
+
+            //When we find the product in the db, we need to store it in a variable.
+            var product = db.Products.Find(transaction.ProductID);
+
+            //If the product doesn't exist we need to 
+            if (product == null)
+            {
+                //throw an exception.
+                throw new Exception();
+            }
+
+            //Update the product quantity by calling the method.
+            UpdateProductQuantity(product, 1);  //The quantity to update will need to be whatever is passed in.
+
+            //Get the product out of the function
+            return product;
+        }
+
+        private void UpdateProductQuantity(Product product, int quantityPurchased)
+        {
+            //Access the quantity property and decrement it.
+            product.Quantity -= quantityPurchased;
         }
 
         // GET: Transaction/Edit/5

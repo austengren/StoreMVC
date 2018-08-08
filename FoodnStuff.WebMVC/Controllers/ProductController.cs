@@ -16,24 +16,35 @@ namespace FoodnStuff.WebMVC.Controllers
         private ApplicationDbContext db = new ApplicationDbContext();
 
         // GET: Product
-        public ActionResult Index()
+        public ViewResult Index(string sortOrder, string searchString)
         {
-            return View(db.Products.ToList());
-        }
-
-        // GET: Product/Details/5
-        public ActionResult Details(int? id)
-        {
-            if (id == null)
+            ViewBag.NameSortParm = String.IsNullOrEmpty(sortOrder) ? "name_desc" : "";
+            var Products = from p in db.Products
+                           select p;
+            if (!String.IsNullOrEmpty(searchString))
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                Products = Products.Where(p => p.ProductName.Contains(searchString)
+                                       || p.UPC.ToString().Contains(searchString));
             }
-            Product product = db.Products.Find(id);
-            if (product == null)
+            switch (sortOrder)
             {
-                return HttpNotFound();
+                case "name_desc":
+                    Products = Products.OrderByDescending(p => p.ProductName);
+                    break;
+                case "UPC":
+                    Products = Products.OrderBy(p => p.UPC);
+                    break;
+                case "Quantity":
+                    Products = Products.OrderByDescending(p => p.Quantity);
+                    break;
+                case "Price":
+                    Products = Products.OrderByDescending(p => p.Price);
+                    break;
+                default:
+                    Products = Products.OrderBy(p => p.ProductName);
+                    break;
             }
-            return View(product);
+            return View(Products.ToList());
         }
 
         // GET: Product/Create
